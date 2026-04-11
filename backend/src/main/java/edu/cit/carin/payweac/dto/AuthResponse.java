@@ -46,6 +46,7 @@ public class AuthResponse {
         private String email;
         private String firstName;
         private String lastName;
+        private String roomNumber;
         private String role;
 
         public UserInfo() {
@@ -56,6 +57,7 @@ public class AuthResponse {
             this.email = user.getEmail();
             this.firstName = user.getFirstName();
             this.lastName = user.getLastName();
+            this.roomNumber = user.getRoomNumber();
             this.role = user.getRole().name();
         }
 
