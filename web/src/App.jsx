@@ -4,6 +4,8 @@ import Layout from './components/Layout'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import PaymentPage from './pages/PaymentPage'
+import PaymentHistory from './pages/PaymentHistory'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -47,6 +49,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pay/:rentId"
+          element={
+            <ProtectedRoute>
+              <PaymentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <PaymentHistory />
             </ProtectedRoute>
           }
         />

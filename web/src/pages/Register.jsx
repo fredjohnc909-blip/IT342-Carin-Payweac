@@ -98,14 +98,15 @@ export default function Register() {
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="roomNumber">Room Number (optional)</label>
+            <label htmlFor="roomNumber">Room (Name and Number)</label>
             <input
               id="roomNumber"
               name="roomNumber"
               type="text"
               value={form.roomNumber}
               onChange={handleChange}
-              placeholder="e.g. 101"
+              placeholder="e.g. Sapphire 101"
+              required
             />
           </div>
 

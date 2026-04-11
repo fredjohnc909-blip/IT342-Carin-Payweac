@@ -1,14 +1,33 @@
 const API_BASE = '/api/v1'
+const STORAGE_KEY = 'payweac_auth'
 
-async function request(endpoint, options = {}) {
+export async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`
+  
+  // Get token from localStorage if it exists
+  const stored = localStorage.getItem(STORAGE_KEY)
+  let authHeader = {}
+  if (stored) {
+    try {
+      const { accessToken } = JSON.parse(stored)
+      if (accessToken) {
+        authHeader = { Authorization: `Bearer ${accessToken}` }
+      }
+    } catch (e) {}
+  }
+
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeader,
       ...options.headers,
     },
     ...options,
   })
+
+  // Handle No Content responses
+  if (res.status === 244 || res.status === 204) return { success: true }
+  
   const data = await res.json()
   if (!res.ok) {
     let msg = data?.error?.message || 'Request failed'
