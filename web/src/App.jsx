@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
-import Register from './pages/Register'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import PaymentPage from './pages/PaymentPage'
-import PaymentHistory from './pages/PaymentHistory'
+import Register from './features/auth/Register'
+import Login from './features/auth/Login'
+import Dashboard from './features/dashboard/Dashboard'
+import PaymentPage from './features/payment/PaymentPage'
+import PaymentHistory from './features/payment/PaymentHistory'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
