@@ -7,6 +7,8 @@ import java.time.Instant;
 public record PaymentDto(
     Long id,
     Long rentId,
+    String tenantName,
+    String roomNumber,
     String rentMonthYear,
     BigDecimal amount,
     String paymentMethod,

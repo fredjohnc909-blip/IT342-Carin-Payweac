@@ -21,9 +21,26 @@ public class DataInitializer {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @Bean
     public CommandLineRunner initData() {
         return args -> {
+            // Check if admin exists, if not create one
+            if (!userRepository.existsByEmail("admin@payweac.com")) {
+                User admin = new User(
+                        "admin@payweac.com",
+                        passwordEncoder.encode("admin123"),
+                        "System",
+                        "Admin",
+                        "ADMIN",
+                        User.Role.ADMIN
+                );
+                userRepository.save(admin);
+                System.out.println("Created default admin user: admin@payweac.com / admin123");
+            }
+
             // Check if there are users and create a sample rent if none exists for them
             userRepository.findAll().forEach(user -> {
                 if (rentRepository.findByUserAndStatus(user, Rent.RentStatus.PENDING).isEmpty()) {

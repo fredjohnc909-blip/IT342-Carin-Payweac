@@ -6,6 +6,7 @@ import Login from './features/auth/Login'
 import Dashboard from './features/dashboard/Dashboard'
 import PaymentPage from './features/payment/PaymentPage'
 import PaymentHistory from './features/payment/PaymentHistory'
+import AdminDashboard from './features/admin/AdminDashboard'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -18,6 +19,17 @@ function ProtectedRoute({ children }) {
 function PublicRoute({ children }) {
   const { user } = useAuth()
   if (user) {
+    return user.role === 'ADMIN' ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />
+  }
+  return children
+}
+
+function AdminRoute({ children }) {
+  const { user } = useAuth()
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+  if (user.role !== 'ADMIN') {
     return <Navigate to="/dashboard" replace />
   }
   return children
@@ -66,6 +78,14 @@ export default function App() {
             <ProtectedRoute>
               <PaymentHistory />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
           }
         />
       </Routes>

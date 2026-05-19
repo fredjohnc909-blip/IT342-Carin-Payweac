@@ -39,7 +39,8 @@ public class Rent {
 
     public enum RentStatus {
         PENDING,
-        PAID
+        PAID,
+        MISSED
     }
 
     public Rent() {}

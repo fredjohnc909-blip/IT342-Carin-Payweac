@@ -11,6 +11,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import edu.cit.carin.payweac.features.rent.RentDto;
+import edu.cit.carin.payweac.features.rent.AdminRentDto;
+import edu.cit.carin.payweac.features.rent.UpdateRentRequest;
+import edu.cit.carin.payweac.features.rent.CreateRentRequest;
+import edu.cit.carin.payweac.features.user.User;
+import edu.cit.carin.payweac.features.user.UserRepository;
+import edu.cit.carin.payweac.features.user.TenantDto;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +31,192 @@ public class AdminController {
 
     @Autowired
     private RentRepository rentRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<List<TenantDto>>> getTenants() {
+        List<TenantDto> tenants = userRepository.findByRole(User.Role.TENANT)
+                .stream()
+                .map(u -> new TenantDto(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.getRoomNumber(), u.getCreatedAt()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(tenants));
+    }
+
+    @GetMapping("/users/{userId}/rents")
+    public ResponseEntity<ApiResponse<List<AdminRentDto>>> getTenantRents(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<AdminRentDto> rents = rentRepository.findByUserOrderByYearDescMonthDesc(user)
+                .stream()
+                .map(rent -> {
+                    List<Payment> payments = paymentRepository.findByRentOrderByPaymentDateDesc(rent);
+                    String payMethod = null;
+                    String refNum = null;
+                    if (!payments.isEmpty()) {
+                        payMethod = payments.get(0).getPaymentMethod().name();
+                        refNum = payments.get(0).getReferenceNumber();
+                    }
+                    return new AdminRentDto(
+                            rent.getId(),
+                            user.getFirstName() + " " + user.getLastName(),
+                            user.getEmail(),
+                            user.getRoomNumber(),
+                            rent.getMonth(),
+                            rent.getYear(),
+                            rent.getAmount(),
+                            rent.getStatus().name(),
+                            rent.getDueDate(),
+                            payMethod,
+                            refNum
+                    );
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(rents));
+    }
+
+    @GetMapping("/rents")
+    public ResponseEntity<ApiResponse<List<AdminRentDto>>> getAllRents() {
+        List<AdminRentDto> rents = rentRepository.findAll()
+                .stream()
+                .sorted((r1, r2) -> {
+                    if (r1.getDueDate() == null && r2.getDueDate() == null) return 0;
+                    if (r1.getDueDate() == null) return 1;
+                    if (r2.getDueDate() == null) return -1;
+                    return r2.getDueDate().compareTo(r1.getDueDate());
+                })
+                .map(rent -> {
+                    User u = rent.getUser();
+                    List<Payment> payments = paymentRepository.findByRentOrderByPaymentDateDesc(rent);
+                    String payMethod = null;
+                    String refNum = null;
+                    if (!payments.isEmpty()) {
+                        payMethod = payments.get(0).getPaymentMethod().name();
+                        refNum = payments.get(0).getReferenceNumber();
+                    }
+                    return new AdminRentDto(
+                            rent.getId(),
+                            u.getFirstName() + " " + u.getLastName(),
+                            u.getEmail(),
+                            u.getRoomNumber(),
+                            rent.getMonth(),
+                            rent.getYear(),
+                            rent.getAmount(),
+                            rent.getStatus().name(),
+                            rent.getDueDate(),
+                            payMethod,
+                            refNum
+                    );
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(rents));
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    @PostMapping("/tenants/{tenantId}/rents")
+    public ResponseEntity<ApiResponse<RentDto>> createRent(@PathVariable Long tenantId, @RequestBody CreateRentRequest request) {
+        User user = userRepository.findById(tenantId)
+                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+
+        Rent rent = new Rent();
+        rent.setUser(user);
+        rent.setMonth(request.getMonth());
+        rent.setYear(request.getYear());
+        rent.setAmount(request.getAmount());
+        rent.setDueDate(request.getDueDate());
+        rent.setStatus(Rent.RentStatus.PENDING);
+
+        Rent saved = rentRepository.save(rent);
+
+        return ResponseEntity.ok(ApiResponse.success(new RentDto(
+                saved.getId(),
+                saved.getMonth(),
+                saved.getYear(),
+                saved.getAmount(),
+                saved.getStatus().name(),
+                saved.getDueDate()
+        )));
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    @DeleteMapping("/rents/{rentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteRent(@PathVariable Long rentId) {
+        Rent rent = rentRepository.findById(rentId)
+                .orElseThrow(() -> new RuntimeException("Rent not found"));
+                
+        // Delete associated payments first to prevent foreign key constraint violation
+        List<Payment> payments = paymentRepository.findByRentOrderByPaymentDateDesc(rent);
+        paymentRepository.deleteAll(payments);
+
+        rentRepository.delete(rent);
+
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    @PutMapping("/rents/{rentId}")
+    public ResponseEntity<ApiResponse<RentDto>> updateRent(@PathVariable Long rentId, @RequestBody UpdateRentRequest request) {
+        Rent rent = rentRepository.findById(rentId)
+                .orElseThrow(() -> new RuntimeException("Rent not found"));
+        
+        if (request.getAmount() != null) {
+            rent.setAmount(request.getAmount());
+        }
+        boolean statusChangedToPaidOrMissed = false;
+        Rent.RentStatus oldStatus = rent.getStatus();
+
+        if (request.getStatus() != null) {
+            rent.setStatus(request.getStatus());
+            if (oldStatus != request.getStatus() && 
+                (request.getStatus() == Rent.RentStatus.PAID || request.getStatus() == Rent.RentStatus.MISSED)) {
+                statusChangedToPaidOrMissed = true;
+            }
+        }
+        if (request.getDueDate() != null) {
+            rent.setDueDate(request.getDueDate());
+        }
+        
+        Rent saved = rentRepository.save(rent);
+
+        if (statusChangedToPaidOrMissed) {
+            try {
+                Payment p = new Payment();
+                p.setUser(rent.getUser());
+                p.setRent(saved);
+                p.setAmount(saved.getAmount());
+                p.setPaymentMethod(Payment.PaymentMethod.CASH);
+                p.setReferenceNumber("OVERRIDE-" + saved.getId() + "-" + java.util.UUID.randomUUID().toString().substring(0, 6));
+                p.setPaymentDate(java.time.Instant.now());
+                p.setStatus(request.getStatus() == Rent.RentStatus.PAID ? Payment.PaymentStatus.APPROVED : Payment.PaymentStatus.REJECTED);
+                p.setAdminRemarks("Manually marked as " + request.getStatus().name() + " by admin");
+                paymentRepository.save(p);
+            } catch (Exception e) {
+                System.err.println("Failed to create dummy payment history record: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.success(new RentDto(
+                saved.getId(),
+                saved.getMonth(),
+                saved.getYear(),
+                saved.getAmount(),
+                saved.getStatus().name(),
+                saved.getDueDate()
+        )));
+    }
+
+    @GetMapping("/payments")
+    public ResponseEntity<ApiResponse<List<PaymentDto>>> getAllPayments() {
+        List<PaymentDto> payments = paymentRepository.findAll()
+                .stream()
+                .sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate()))
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success(payments));
+    }
 
     @GetMapping("/payments/pending")
     public ResponseEntity<ApiResponse<List<PaymentDto>>> getPendingPayments() {
@@ -55,10 +249,34 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(mapToDto(saved)));
     }
 
+    @PutMapping("/payments/{id}/reject")
+    public ResponseEntity<ApiResponse<PaymentDto>> rejectPayment(
+            @PathVariable Long id,
+            @RequestParam(value = "remarks", required = false) String remarks) {
+
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+        payment.setStatus(Payment.PaymentStatus.REJECTED);
+        payment.setAdminRemarks(remarks);
+        
+        // Also update the associated rent status back to pending or missed
+        Rent rent = payment.getRent();
+        rent.setStatus(Rent.RentStatus.PENDING);
+        rentRepository.save(rent);
+
+        Payment saved = paymentRepository.save(payment);
+
+        return ResponseEntity.ok(ApiResponse.success(mapToDto(saved)));
+    }
+
     private PaymentDto mapToDto(Payment p) {
+        edu.cit.carin.payweac.features.user.User u = p.getUser();
         return new PaymentDto(
                 p.getId(),
                 p.getRent().getId(),
+                u.getFirstName() + " " + u.getLastName(),
+                u.getRoomNumber(),
                 p.getRent().getMonth() + " " + p.getRent().getYear(),
                 p.getAmount(),
                 p.getPaymentMethod().name(),

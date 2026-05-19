@@ -80,9 +80,12 @@ public class PaymentController {
     }
 
     private PaymentDto mapToDto(Payment p) {
+        User u = p.getUser();
         return new PaymentDto(
                 p.getId(),
                 p.getRent().getId(),
+                u.getFirstName() + " " + u.getLastName(),
+                u.getRoomNumber(),
                 p.getRent().getMonth() + " " + p.getRent().getYear(),
                 p.getAmount(),
                 p.getPaymentMethod().name(),
