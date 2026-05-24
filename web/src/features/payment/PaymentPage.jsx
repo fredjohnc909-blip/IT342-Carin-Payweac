@@ -27,7 +27,8 @@ export default function PaymentPage() {
         const selected = res.data.find(d => d.id === parseInt(rentId))
         if (selected) {
           setRent(selected)
-          setFormData(prev => ({ ...prev, amount: selected.amount }))
+          const amountToPay = selected.remainingBalance !== undefined && selected.remainingBalance !== null ? selected.remainingBalance : selected.amount;
+          setFormData(prev => ({ ...prev, amount: amountToPay }))
         }
       } catch (err) {
         setError('Failed to load rent details.')

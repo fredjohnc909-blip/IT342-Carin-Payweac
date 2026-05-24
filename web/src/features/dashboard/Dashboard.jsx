@@ -25,8 +25,8 @@ export default function Dashboard() {
     fetchDues()
   }, [])
 
-  const pendingDues = dues.filter(d => d.status === 'PENDING')
-  const totalDue = pendingDues.reduce((sum, d) => sum + d.amount, 0)
+  const pendingDues = dues.filter(d => d.status === 'PENDING' || d.status === 'PARTIALLY_PAID')
+  const totalDue = pendingDues.reduce((sum, d) => sum + (d.remainingBalance !== undefined && d.remainingBalance !== null ? d.remainingBalance : d.amount), 0)
 
   return (
     <div className={styles.container}>
@@ -76,12 +76,17 @@ export default function Dashboard() {
                   </div>
                   <div className={styles.dueAmount}>
                     ₱{due.amount.toLocaleString()}
+                    {due.status === 'PARTIALLY_PAID' && (
+                      <div style={{fontSize: '0.8em', color: '#666', marginTop: '4px'}}>
+                        Remaining: ₱{due.remainingBalance.toLocaleString()}
+                      </div>
+                    )}
                   </div>
                   <div className={styles.dueStatus}>
                     <span className={due.status === 'PAID' ? styles.statusPaid : styles.statusPending}>
-                      {due.status}
+                      {due.status === 'PARTIALLY_PAID' ? 'Paid (Not Fully)' : due.status}
                     </span>
-                    {due.status === 'PENDING' && (
+                    {(due.status === 'PENDING' || due.status === 'PARTIALLY_PAID') && (
                       <Link to={`/pay/${due.id}`} className={styles.payBtn}>Pay Now</Link>
                     )}
                   </div>

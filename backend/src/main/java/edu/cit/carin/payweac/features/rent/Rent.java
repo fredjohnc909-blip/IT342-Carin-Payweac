@@ -40,6 +40,7 @@ public class Rent {
     public enum RentStatus {
         PENDING,
         PAID,
+        PARTIALLY_PAID,
         MISSED
     }
 

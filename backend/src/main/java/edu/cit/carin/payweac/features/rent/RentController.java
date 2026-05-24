@@ -11,11 +11,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import edu.cit.carin.payweac.features.payment.PaymentRepository;
+import edu.cit.carin.payweac.features.payment.Payment;
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.Collectors;import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/v1/rents")
+@Transactional
 public class RentController {
 
     @Autowired
@@ -23,6 +27,9 @@ public class RentController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @GetMapping("/my-dues")
     public ResponseEntity<ApiResponse<List<RentDto>>> getMyDues() {
@@ -34,14 +41,26 @@ public class RentController {
 
         List<RentDto> dues = rentRepository.findByUserOrderByYearDescMonthDesc(user)
                 .stream()
-                .map(rent -> new RentDto(
+                .map(rent -> {
+                    List<Payment> payments = paymentRepository.findByRentOrderByPaymentDateDesc(rent);
+                    BigDecimal amountPaid = payments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+                        .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal rentAmount = rent.getAmount() != null ? rent.getAmount() : BigDecimal.ZERO;
+                    BigDecimal remainingBalance = rentAmount.subtract(amountPaid);
+
+                    return new RentDto(
                         rent.getId(),
                         rent.getMonth(),
                         rent.getYear(),
-                        rent.getAmount(),
-                        rent.getStatus().name(),
+                        rentAmount,
+                        amountPaid,
+                        remainingBalance,
+                        rent.getStatus() != null ? rent.getStatus().name() : "PENDING",
                         rent.getDueDate()
-                ))
+                    );
+                })
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success(dues));

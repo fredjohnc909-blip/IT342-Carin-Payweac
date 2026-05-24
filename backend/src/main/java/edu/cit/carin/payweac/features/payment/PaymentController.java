@@ -67,8 +67,19 @@ public class PaymentController {
             payment.setReceiptImage(receipt.getBytes());
         }
 
-        // Auto-update rent status to PAID so it reflects immediately
-        rent.setStatus(Rent.RentStatus.PAID);
+        // Auto-update rent status so it reflects immediately
+        java.math.BigDecimal currentPaid = paymentRepository.findByRentOrderByPaymentDateDesc(rent).stream()
+            .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+            .map(p -> p.getAmount() != null ? p.getAmount() : java.math.BigDecimal.ZERO)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        java.math.BigDecimal rentAmount = rent.getAmount() != null ? rent.getAmount() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal newTotalPaid = currentPaid.add(amount);
+
+        if (newTotalPaid.compareTo(rentAmount) >= 0) {
+            rent.setStatus(Rent.RentStatus.PAID);
+        } else {
+            rent.setStatus(Rent.RentStatus.PARTIALLY_PAID);
+        }
         rentRepository.save(rent);
 
         Payment saved = paymentRepository.save(payment);

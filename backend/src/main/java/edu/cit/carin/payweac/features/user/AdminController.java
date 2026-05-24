@@ -21,6 +21,7 @@ import edu.cit.carin.payweac.features.user.TenantDto;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +63,12 @@ public class AdminController {
                         payMethod = payments.get(0).getPaymentMethod().name();
                         refNum = payments.get(0).getReferenceNumber();
                     }
+                    BigDecimal amountPaid = payments.stream()
+                        .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+                        .map(Payment::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal remainingBalance = rent.getAmount().subtract(amountPaid);
+
                     return new AdminRentDto(
                             rent.getId(),
                             user.getFirstName() + " " + user.getLastName(),
@@ -70,6 +77,8 @@ public class AdminController {
                             rent.getMonth(),
                             rent.getYear(),
                             rent.getAmount(),
+                            amountPaid,
+                            remainingBalance,
                             rent.getStatus().name(),
                             rent.getDueDate(),
                             payMethod,
@@ -99,6 +108,12 @@ public class AdminController {
                         payMethod = payments.get(0).getPaymentMethod().name();
                         refNum = payments.get(0).getReferenceNumber();
                     }
+                    BigDecimal amountPaid = payments.stream()
+                        .filter(p -> p.getStatus() == edu.cit.carin.payweac.features.payment.Payment.PaymentStatus.APPROVED)
+                        .map(edu.cit.carin.payweac.features.payment.PaymentSummary::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal remainingBalance = rent.getAmount().subtract(amountPaid);
+
                     return new AdminRentDto(
                             rent.getId(),
                             u.getFirstName() + " " + u.getLastName(),
@@ -107,6 +122,8 @@ public class AdminController {
                             rent.getMonth(),
                             rent.getYear(),
                             rent.getAmount(),
+                            amountPaid,
+                            remainingBalance,
                             rent.getStatus().name(),
                             rent.getDueDate(),
                             payMethod,
@@ -137,6 +154,8 @@ public class AdminController {
                 saved.getId(),
                 saved.getMonth(),
                 saved.getYear(),
+                saved.getAmount(),
+                BigDecimal.ZERO,
                 saved.getAmount(),
                 saved.getStatus().name(),
                 saved.getDueDate()
@@ -200,11 +219,21 @@ public class AdminController {
                 e.printStackTrace();
             }
         }
+        List<Payment> payments = paymentRepository.findByRentOrderByPaymentDateDesc(saved);
+        BigDecimal amountPaid = payments.stream()
+            .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+            .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal rentAmount = saved.getAmount() != null ? saved.getAmount() : BigDecimal.ZERO;
+        BigDecimal remainingBalance = rentAmount.subtract(amountPaid);
+
         return ResponseEntity.ok(ApiResponse.success(new RentDto(
                 saved.getId(),
                 saved.getMonth(),
                 saved.getYear(),
-                saved.getAmount(),
+                rentAmount,
+                amountPaid,
+                remainingBalance,
                 saved.getStatus().name(),
                 saved.getDueDate()
         )));
@@ -241,12 +270,23 @@ public class AdminController {
         payment.setStatus(Payment.PaymentStatus.APPROVED);
         payment.setAdminRemarks(remarks);
         
+        Payment saved = paymentRepository.save(payment);
+
         // Also update the associated rent status
         Rent rent = payment.getRent();
-        rent.setStatus(Rent.RentStatus.PAID);
+        BigDecimal currentPaid = paymentRepository.findByRentOrderByPaymentDateDesc(rent).stream()
+            .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+            .map(Payment::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+        if (currentPaid.compareTo(rent.getAmount()) >= 0) {
+            rent.setStatus(Rent.RentStatus.PAID);
+        } else if (currentPaid.compareTo(BigDecimal.ZERO) > 0) {
+            rent.setStatus(Rent.RentStatus.PARTIALLY_PAID);
+        } else {
+            rent.setStatus(Rent.RentStatus.PENDING);
+        }
         rentRepository.save(rent);
-
-        Payment saved = paymentRepository.save(payment);
 
         return ResponseEntity.ok(ApiResponse.success(mapToDto(saved)));
     }
@@ -262,12 +302,23 @@ public class AdminController {
         payment.setStatus(Payment.PaymentStatus.REJECTED);
         payment.setAdminRemarks(remarks);
         
+        Payment saved = paymentRepository.save(payment);
+
         // Also update the associated rent status back to pending or missed
         Rent rent = payment.getRent();
-        rent.setStatus(Rent.RentStatus.PENDING);
+        BigDecimal currentPaid = paymentRepository.findByRentOrderByPaymentDateDesc(rent).stream()
+            .filter(p -> p.getStatus() == Payment.PaymentStatus.APPROVED)
+            .map(Payment::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+        if (currentPaid.compareTo(rent.getAmount()) >= 0) {
+            rent.setStatus(Rent.RentStatus.PAID);
+        } else if (currentPaid.compareTo(BigDecimal.ZERO) > 0) {
+            rent.setStatus(Rent.RentStatus.PARTIALLY_PAID);
+        } else {
+            rent.setStatus(Rent.RentStatus.PENDING);
+        }
         rentRepository.save(rent);
-
-        Payment saved = paymentRepository.save(payment);
 
         return ResponseEntity.ok(ApiResponse.success(mapToDto(saved)));
     }

@@ -61,6 +61,7 @@ export default function EditRentModal({ rent, onClose, onSave }) {
               onChange={(e) => setStatus(e.target.value)}
             >
               <option value="PENDING">PENDING</option>
+              <option value="PARTIALLY_PAID">PARTIALLY_PAID</option>
               <option value="PAID">PAID</option>
               <option value="MISSED">MISSED</option>
             </select>

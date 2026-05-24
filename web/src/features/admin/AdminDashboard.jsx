@@ -275,7 +275,14 @@ export default function AdminDashboard() {
                     </td>
                     <td>{rent.roomNumber || '-'}</td>
                     <td>{rent.month} {rent.year}</td>
-                    <td>₱{rent.amount.toLocaleString()}</td>
+                    <td>
+                      <div>₱{rent.amount.toLocaleString()}</div>
+                      {rent.status === 'PARTIALLY_PAID' && (
+                        <div style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>
+                          Rem: ₱{rent.remainingBalance?.toLocaleString()}
+                        </div>
+                      )}
+                    </td>
                     <td>{rent.dueDate ? new Date(rent.dueDate).toLocaleDateString() : '-'}</td>
                     <td>
                       {rent.paymentMethod ? (
@@ -291,7 +298,7 @@ export default function AdminDashboard() {
                         rent.status === 'MISSED' ? styles.statusMissed :
                         styles.statusPending
                       }>
-                        {rent.status}
+                        {rent.status === 'PARTIALLY_PAID' ? 'Paid (Not Fully)' : rent.status}
                       </span>
                     </td>
                     <td>

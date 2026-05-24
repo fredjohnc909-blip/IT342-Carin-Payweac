@@ -9,6 +9,8 @@ public record RentDto(
     String month,
     int year,
     BigDecimal amount,
+    BigDecimal amountPaid,
+    BigDecimal remainingBalance,
     String status,
     LocalDate dueDate
 ) {}
