@@ -13,6 +13,9 @@ function ProtectedRoute({ children }) {
   if (!user) {
     return <Navigate to="/login" replace />
   }
+  if (user.role === 'ADMIN') {
+    return <Navigate to="/admin" replace />
+  }
   return children
 }
 

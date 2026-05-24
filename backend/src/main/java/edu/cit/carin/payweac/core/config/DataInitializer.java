@@ -41,28 +41,8 @@ public class DataInitializer {
                 System.out.println("Created default admin user: admin@payweac.com / admin123");
             }
 
-            // Check if there are users and create a sample rent if none exists for them
-            userRepository.findAll().forEach(user -> {
-                if (rentRepository.findByUserAndStatus(user, Rent.RentStatus.PENDING).isEmpty()) {
-                    Rent sampleRent = new Rent();
-                    sampleRent.setUser(user);
-                    sampleRent.setMonth("April");
-                    sampleRent.setYear(2026);
-                    sampleRent.setAmount(new BigDecimal("5000.00"));
-                    sampleRent.setStatus(Rent.RentStatus.PENDING);
-                    sampleRent.setDueDate(LocalDate.now().plusDays(5));
-                    rentRepository.save(sampleRent);
-                    
-                    Rent webRent = new Rent();
-                    webRent.setUser(user);
-                    webRent.setMonth("May");
-                    webRent.setYear(2026);
-                    webRent.setAmount(new BigDecimal("5000.00"));
-                    webRent.setStatus(Rent.RentStatus.PENDING);
-                    webRent.setDueDate(LocalDate.now().plusDays(35));
-                    rentRepository.save(webRent);
-                }
-            });
+            // Removing automatic rent generation to prevent duplicate rents
+            // after the backend restarts.
         };
     }
 }

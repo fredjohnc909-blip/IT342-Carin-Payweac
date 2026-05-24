@@ -50,6 +50,13 @@ export const approvePayment = async (paymentId) => {
   return response.data
 }
 
+export const deletePayment = async (paymentId) => {
+  const res = await request(`/admin/payments/${paymentId}`, {
+    method: 'DELETE'
+  })
+  return res.data
+}
+
 export const rejectPayment = async (paymentId) => {
   const response = await request(`/admin/payments/${paymentId}/reject`, {
     method: 'PUT'

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getTenants, getAllPayments, getAllRents, updateRent, approvePayment, rejectPayment } from './admin'
+import { getTenants, getAllPayments, getAllRents, updateRent, approvePayment, rejectPayment, deletePayment } from './admin'
 import TenantDetails from './TenantDetails'
 import EditRentModal from './EditRentModal'
 import styles from './AdminDashboard.module.css'
@@ -62,6 +62,16 @@ export default function AdminDashboard() {
       loadData()
     } catch (err) {
       alert('Failed to reject payment')
+    }
+  }
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!window.confirm('Are you sure you want to delete this payment?')) return
+    try {
+      await deletePayment(paymentId)
+      loadData()
+    } catch (err) {
+      alert('Failed to delete payment')
     }
   }
 
@@ -201,24 +211,33 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td>
-                      {payment.status === 'PENDING' ? (
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => handleApprovePayment(payment.id)}
-                            className={styles.actionBtn}
-                            style={{ background: '#dcfce7', color: '#166534' }}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleRejectPayment(payment.id)}
-                            className={styles.actionBtn}
-                            style={{ background: '#fee2e2', color: '#991b1b' }}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : '-'}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {payment.status === 'PENDING' && (
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => handleApprovePayment(payment.id)}
+                              className={styles.actionBtn}
+                              style={{ background: '#dcfce7', color: '#166534' }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectPayment(payment.id)}
+                              className={styles.actionBtn}
+                              style={{ background: '#fee2e2', color: '#991b1b' }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleDeletePayment(payment.id)}
+                          className={styles.actionBtn}
+                          style={{ background: '#f3f4f6', color: '#dc2626' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

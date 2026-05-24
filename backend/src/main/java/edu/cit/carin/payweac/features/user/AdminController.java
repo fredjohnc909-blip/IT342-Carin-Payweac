@@ -22,8 +22,11 @@ import edu.cit.carin.payweac.features.user.TenantDto;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/v1/admin")
+@Transactional
 public class AdminController {
 
     @Autowired
@@ -89,7 +92,7 @@ public class AdminController {
                 })
                 .map(rent -> {
                     User u = rent.getUser();
-                    List<Payment> payments = paymentRepository.findByRentOrderByPaymentDateDesc(rent);
+                    List<edu.cit.carin.payweac.features.payment.PaymentSummary> payments = paymentRepository.findSummaryByRentOrderByPaymentDateDesc(rent);
                     String payMethod = null;
                     String refNum = null;
                     if (!payments.isEmpty()) {
@@ -209,10 +212,9 @@ public class AdminController {
 
     @GetMapping("/payments")
     public ResponseEntity<ApiResponse<List<PaymentDto>>> getAllPayments() {
-        List<PaymentDto> payments = paymentRepository.findAll()
+        List<PaymentDto> payments = paymentRepository.findAllProjectedByOrderByPaymentDateDesc()
                 .stream()
-                .sorted((p1, p2) -> p2.getPaymentDate().compareTo(p1.getPaymentDate()))
-                .map(this::mapToDto)
+                .map(this::mapSummaryToDto)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success(payments));
@@ -220,9 +222,9 @@ public class AdminController {
 
     @GetMapping("/payments/pending")
     public ResponseEntity<ApiResponse<List<PaymentDto>>> getPendingPayments() {
-        List<PaymentDto> pending = paymentRepository.findByStatusOrderByPaymentDateDesc(Payment.PaymentStatus.PENDING)
+        List<PaymentDto> pending = paymentRepository.findSummaryByStatusOrderByPaymentDateDesc(Payment.PaymentStatus.PENDING)
                 .stream()
-                .map(this::mapToDto)
+                .map(this::mapSummaryToDto)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success(pending));
@@ -268,6 +270,60 @@ public class AdminController {
         Payment saved = paymentRepository.save(payment);
 
         return ResponseEntity.ok(ApiResponse.success(mapToDto(saved)));
+    }
+
+    @DeleteMapping("/payments/{id}")
+    public ResponseEntity<ApiResponse<Void>> deletePayment(@PathVariable Long id) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment not found"));
+        paymentRepository.delete(payment);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/rents/delete-dupes")
+    public ResponseEntity<String> deleteDuplicateRents() {
+        List<Rent> allRents = rentRepository.findAll();
+        java.util.Map<String, Rent> kept = new java.util.HashMap<>();
+        int deletedCount = 0;
+        
+        for (Rent r : allRents) {
+            String key = r.getUser().getId() + "-" + r.getMonth() + "-" + r.getYear();
+            if (kept.containsKey(key)) {
+                Rent existing = kept.get(key);
+                if (existing.getStatus() == Rent.RentStatus.PAID && r.getStatus() != Rent.RentStatus.PAID) {
+                    rentRepository.delete(r);
+                    deletedCount++;
+                } else if (existing.getStatus() != Rent.RentStatus.PAID && r.getStatus() == Rent.RentStatus.PAID) {
+                    rentRepository.delete(existing);
+                    kept.put(key, r);
+                    deletedCount++;
+                } else {
+                    rentRepository.delete(r);
+                    deletedCount++;
+                }
+            } else {
+                kept.put(key, r);
+            }
+        }
+        return ResponseEntity.ok("Deleted " + deletedCount + " duplicate rents.");
+    }
+
+    private PaymentDto mapSummaryToDto(edu.cit.carin.payweac.features.payment.PaymentSummary p) {
+        edu.cit.carin.payweac.features.payment.PaymentSummary.UserSummary u = p.getUser();
+        edu.cit.carin.payweac.features.payment.PaymentSummary.RentSummary r = p.getRent();
+        return new PaymentDto(
+                p.getId(),
+                r.getId(),
+                u.getFirstName() + " " + u.getLastName(),
+                u.getRoomNumber(),
+                r.getMonth() + " " + r.getYear(),
+                p.getAmount(),
+                p.getPaymentMethod().name(),
+                p.getReferenceNumber(),
+                p.getStatus().name(),
+                p.getPaymentDate(),
+                p.getAdminRemarks()
+        );
     }
 
     private PaymentDto mapToDto(Payment p) {

@@ -24,7 +24,11 @@ export default function Login() {
       const res = await loginApi(form.email, form.password)
       if (res.success && res.data) {
         login(res.data.user, res.data.accessToken)
-        navigate('/dashboard')
+        if (res.data.user.role === 'ADMIN') {
+          navigate('/admin')
+        } else {
+          navigate('/dashboard')
+        }
       } else {
         setError(res.error?.message || 'Login failed')
       }

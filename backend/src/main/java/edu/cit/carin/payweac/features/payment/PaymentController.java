@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/payments")
+@Transactional
 public class PaymentController {
 
     @Autowired
@@ -33,6 +35,7 @@ public class PaymentController {
     @Autowired
     private UserRepository userRepository;
 
+    @Transactional
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<PaymentDto>> submitPayment(
             @RequestParam("rentId") Long rentId,
@@ -48,17 +51,25 @@ public class PaymentController {
         Rent rent = rentRepository.findById(rentId)
                 .orElseThrow(() -> new RuntimeException("Rent record not found"));
 
+        if (rent.getStatus() == Rent.RentStatus.PAID) {
+            throw new RuntimeException("This rent has already been paid.");
+        }
+
         Payment payment = new Payment();
         payment.setRent(rent);
         payment.setUser(user);
         payment.setAmount(amount);
         payment.setPaymentMethod(Payment.PaymentMethod.valueOf(paymentMethod.toUpperCase()));
         payment.setReferenceNumber(referenceNumber);
-        payment.setStatus(Payment.PaymentStatus.PENDING);
+        payment.setStatus(Payment.PaymentStatus.APPROVED);
 
         if (receipt != null && !receipt.isEmpty()) {
             payment.setReceiptImage(receipt.getBytes());
         }
+
+        // Auto-update rent status to PAID so it reflects immediately
+        rent.setStatus(Rent.RentStatus.PAID);
+        rentRepository.save(rent);
 
         Payment saved = paymentRepository.save(payment);
 
@@ -71,12 +82,30 @@ public class PaymentController {
         User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<PaymentDto> history = paymentRepository.findByUserOrderByPaymentDateDesc(user)
+        List<PaymentDto> history = paymentRepository.findSummaryByUserOrderByPaymentDateDesc(user)
                 .stream()
-                .map(this::mapToDto)
+                .map(this::mapSummaryToDto)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success(history));
+    }
+
+    private PaymentDto mapSummaryToDto(PaymentSummary p) {
+        PaymentSummary.UserSummary u = p.getUser();
+        PaymentSummary.RentSummary r = p.getRent();
+        return new PaymentDto(
+                p.getId(),
+                r.getId(),
+                u.getFirstName() + " " + u.getLastName(),
+                u.getRoomNumber(),
+                r.getMonth() + " " + r.getYear(),
+                p.getAmount(),
+                p.getPaymentMethod().name(),
+                p.getReferenceNumber(),
+                p.getStatus().name(),
+                p.getPaymentDate(),
+                p.getAdminRemarks()
+        );
     }
 
     private PaymentDto mapToDto(Payment p) {
@@ -94,5 +123,22 @@ public class PaymentController {
                 p.getPaymentDate(),
                 p.getAdminRemarks()
         );
+    }
+
+    @GetMapping("/delete-dupes")
+    public ResponseEntity<String> deleteDupes() {
+        List<Payment> all = paymentRepository.findAll();
+        java.util.Map<Long, Payment> kept = new java.util.HashMap<>();
+        int deletedCount = 0;
+        for (Payment p : all) {
+            Long rentId = p.getRent().getId();
+            if (kept.containsKey(rentId)) {
+                paymentRepository.delete(p);
+                deletedCount++;
+            } else {
+                kept.put(rentId, p);
+            }
+        }
+        return ResponseEntity.ok("Deleted " + deletedCount + " duplicates.");
     }
 }
