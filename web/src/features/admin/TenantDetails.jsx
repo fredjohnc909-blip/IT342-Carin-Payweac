@@ -30,7 +30,7 @@ export default function TenantDetails({ tenant, onBack }) {
   const handleSaveRent = async (rentId, data) => {
     try {
       const updated = await updateRent(rentId, data)
-      setRents(rents.map(r => r.id === updated.id ? updated : r))
+      setRents(rents.map(r => r.id === updated.id ? { ...r, ...updated } : r))
       setEditingRent(null)
     } catch (err) {
       alert('Failed to update rent')
@@ -87,7 +87,7 @@ export default function TenantDetails({ tenant, onBack }) {
           <button 
             onClick={() => setIsAddingRent(true)}
             className={styles.actionBtn}
-            style={{ background: 'var(--primary-color)', color: 'white' }}
+            style={{ background: 'var(--primary)', color: 'white' }}
           >
             + Add Rent Due
           </button>
@@ -102,8 +102,8 @@ export default function TenantDetails({ tenant, onBack }) {
               <div key={rent.id} className={styles.rentItem}>
                 <div className={styles.rentInfo}>
                   <strong>{rent.month} {rent.year}</strong>
-                  <span>Start: {rent.startDate ? new Date(rent.startDate).toLocaleDateString() : '-'}</span>
-                  <span>Due: {rent.dueDate ? new Date(rent.dueDate).toLocaleDateString() : '-'}</span>
+                  <span>Start: {rent.startDate ? (Array.isArray(rent.startDate) ? new Date(rent.startDate[0], rent.startDate[1]-1, rent.startDate[2]) : new Date(rent.startDate)).toLocaleDateString() : '-'}</span>
+                  <span>Due: {rent.dueDate ? (Array.isArray(rent.dueDate) ? new Date(rent.dueDate[0], rent.dueDate[1]-1, rent.dueDate[2]) : new Date(rent.dueDate)).toLocaleDateString() : '-'}</span>
                   {rent.paymentMethod && (
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       Paid via: {rent.paymentMethod} {rent.referenceNumber ? `(${rent.referenceNumber})` : ''}

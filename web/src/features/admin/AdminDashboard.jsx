@@ -276,7 +276,7 @@ export default function AdminDashboard() {
                     </td>
                     <td>{rent.roomNumber || '-'}</td>
                     <td>{rent.month} {rent.year}</td>
-                  <td>{rent.startDate ? new Date(rent.startDate).toLocaleDateString() : '-'}</td>
+                  <td>{rent.startDate ? (Array.isArray(rent.startDate) ? new Date(rent.startDate[0], rent.startDate[1]-1, rent.startDate[2]) : new Date(rent.startDate)).toLocaleDateString() : '-'}</td>
                     <td>
                       <div>₱{rent.amount.toLocaleString()}</div>
                       {rent.status === 'PARTIALLY_PAID' && (
@@ -285,7 +285,7 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </td>
-                    <td>{rent.dueDate ? new Date(rent.dueDate).toLocaleDateString() : '-'}</td>
+                    <td>{rent.dueDate ? (Array.isArray(rent.dueDate) ? new Date(rent.dueDate[0], rent.dueDate[1]-1, rent.dueDate[2]) : new Date(rent.dueDate)).toLocaleDateString() : '-'}</td>
                     <td>
                       {rent.paymentMethod ? (
                         <>
