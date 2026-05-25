@@ -102,7 +102,8 @@ export default function TenantDetails({ tenant, onBack }) {
               <div key={rent.id} className={styles.rentItem}>
                 <div className={styles.rentInfo}>
                   <strong>{rent.month} {rent.year}</strong>
-                  <span>Due: {new Date(rent.dueDate).toLocaleDateString()}</span>
+                  <span>Start: {rent.startDate ? new Date(rent.startDate).toLocaleDateString() : '-'}</span>
+                  <span>Due: {rent.dueDate ? new Date(rent.dueDate).toLocaleDateString() : '-'}</span>
                   {rent.paymentMethod && (
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       Paid via: {rent.paymentMethod} {rent.referenceNumber ? `(${rent.referenceNumber})` : ''}

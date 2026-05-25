@@ -5,6 +5,7 @@ export default function AddRentModal({ onClose, onSave }) {
   const [month, setMonth] = useState('January')
   const [year, setYear] = useState(new Date().getFullYear())
   const [amount, setAmount] = useState('5000')
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10))
   const [dueDate, setDueDate] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -21,6 +22,7 @@ export default function AddRentModal({ onClose, onSave }) {
         month,
         year: parseInt(year),
         amount,
+        startDate,
         dueDate
       })
     } catch (err) {
@@ -60,6 +62,16 @@ export default function AddRentModal({ onClose, onSave }) {
               type="number" 
               value={amount} 
               onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Start Date</label>
+            <input 
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               required
             />
           </div>

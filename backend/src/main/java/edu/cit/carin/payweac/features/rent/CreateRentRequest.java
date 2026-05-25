@@ -7,6 +7,7 @@ public class CreateRentRequest {
     private String month;
     private int year;
     private BigDecimal amount;
+    private LocalDate startDate;
     private LocalDate dueDate;
 
     public String getMonth() {
@@ -31,6 +32,14 @@ public class CreateRentRequest {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
     }
 
     public LocalDate getDueDate() {

@@ -58,6 +58,7 @@ public class RentController {
                         amountPaid,
                         remainingBalance,
                         rent.getStatus() != null ? rent.getStatus().name() : "PENDING",
+                        rent.getStartDate(),
                         rent.getDueDate()
                     );
                 })

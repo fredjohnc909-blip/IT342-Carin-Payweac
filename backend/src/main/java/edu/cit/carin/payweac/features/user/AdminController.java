@@ -80,6 +80,7 @@ public class AdminController {
                             amountPaid,
                             remainingBalance,
                             rent.getStatus().name(),
+                            rent.getStartDate(),
                             rent.getDueDate(),
                             payMethod,
                             refNum
@@ -125,6 +126,7 @@ public class AdminController {
                             amountPaid,
                             remainingBalance,
                             rent.getStatus().name(),
+                            rent.getStartDate(),
                             rent.getDueDate(),
                             payMethod,
                             refNum
@@ -145,6 +147,7 @@ public class AdminController {
         rent.setMonth(request.getMonth());
         rent.setYear(request.getYear());
         rent.setAmount(request.getAmount());
+        rent.setStartDate(request.getStartDate());
         rent.setDueDate(request.getDueDate());
         rent.setStatus(Rent.RentStatus.PENDING);
 
@@ -158,6 +161,7 @@ public class AdminController {
                 BigDecimal.ZERO,
                 saved.getAmount(),
                 saved.getStatus().name(),
+                saved.getStartDate(),
                 saved.getDueDate()
         )));
     }
@@ -185,6 +189,9 @@ public class AdminController {
         
         if (request.getAmount() != null) {
             rent.setAmount(request.getAmount());
+        }
+        if (request.getStartDate() != null) {
+            rent.setStartDate(request.getStartDate());
         }
         boolean statusChangedToPaidOrMissed = false;
         Rent.RentStatus oldStatus = rent.getStatus();
@@ -235,6 +242,7 @@ public class AdminController {
                 amountPaid,
                 remainingBalance,
                 saved.getStatus().name(),
+                saved.getStartDate(),
                 saved.getDueDate()
         )));
     }

@@ -12,5 +12,6 @@ public record RentDto(
     BigDecimal amountPaid,
     BigDecimal remainingBalance,
     String status,
+    LocalDate startDate,
     LocalDate dueDate
 ) {}

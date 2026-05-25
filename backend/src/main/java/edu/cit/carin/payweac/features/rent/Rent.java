@@ -27,6 +27,9 @@ public class Rent {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RentStatus status = RentStatus.PENDING;
@@ -60,6 +63,9 @@ public class Rent {
 
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
+
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
 
     public RentStatus getStatus() { return status; }
     public void setStatus(RentStatus status) { this.status = status; }

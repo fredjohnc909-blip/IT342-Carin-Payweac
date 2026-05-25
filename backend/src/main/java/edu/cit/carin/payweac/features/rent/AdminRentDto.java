@@ -14,6 +14,7 @@ public record AdminRentDto(
     BigDecimal amountPaid,
     BigDecimal remainingBalance,
     String status,
+    LocalDate startDate,
     LocalDate dueDate,
     String paymentMethod,
     String referenceNumber

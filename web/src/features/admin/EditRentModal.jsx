@@ -2,25 +2,26 @@ import { useState } from 'react'
 import styles from './AdminDashboard.module.css'
 
 export default function EditRentModal({ rent, onClose, onSave }) {
-  const getInitialDate = () => {
-    if (!rent.dueDate) return '';
-    if (Array.isArray(rent.dueDate)) {
-      const [y, m, d] = rent.dueDate;
+  const getInitialDate = (date) => {
+    if (!date) return '';
+    if (Array.isArray(date)) {
+      const [y, m, d] = date;
       return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
-    return rent.dueDate.split('T')[0];
+    return date.split('T')[0];
   }
 
   const [amount, setAmount] = useState(rent.amount)
   const [status, setStatus] = useState(rent.status)
-  const [dueDate, setDueDate] = useState(getInitialDate())
+  const [startDate, setStartDate] = useState(getInitialDate(rent.startDate))
+  const [dueDate, setDueDate] = useState(getInitialDate(rent.dueDate))
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
-      await onSave(rent.id, { amount, status, dueDate })
+      await onSave(rent.id, { amount, status, startDate, dueDate })
     } finally {
       setLoading(false)
     }
@@ -40,6 +41,16 @@ export default function EditRentModal({ rent, onClose, onSave }) {
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               required
             />
           </div>

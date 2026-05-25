@@ -43,6 +43,7 @@ public class DebugTest {
                         amountPaid,
                         remainingBalance,
                         rent.getStatus().name(),
+                        rent.getStartDate(),
                         rent.getDueDate()
                 );
                 System.out.println("SUCCESS for rent: " + rent.getId());
